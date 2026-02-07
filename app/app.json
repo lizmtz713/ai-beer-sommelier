@@ -1,0 +1,77 @@
+{
+  "expo": {
+    "name": "AI Beer Sommelier",
+    "slug": "ai-beer-sommelier",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A1A2E"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aibeersommelier.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "AI Beer Sommelier needs camera access to scan barcodes and take photos of your beers.",
+        "NSPhotoLibraryUsageDescription": "AI Beer Sommelier needs photo library access to add beer photos from your gallery.",
+        "NSLocationWhenInUseUsageDescription": "AI Beer Sommelier uses your location to tag where you enjoyed your beers and find nearby craft breweries.",
+        "NSMicrophoneUsageDescription": "AI Beer Sommelier may need microphone access for voice commands."
+      },
+      "config": {
+        "googleSignIn": {
+          "reservedClientId": "YOUR_REVERSED_CLIENT_ID"
+        }
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1A1A2E"
+      },
+      "package": "com.aibeersommelier.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+        }
+      }
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow AI Beer Sommelier to access your camera to scan barcodes and capture beer photos."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow AI Beer Sommelier to use your location for brewery recommendations."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow AI Beer Sommelier to access your photos to add beer images."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-eas-project-id"
+      }
+    }
+  }
+}
