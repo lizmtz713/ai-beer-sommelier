@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
+import { SubscriptionProvider } from '@/providers/SubscriptionProvider';
 
 // Screens
 import { LoginScreen } from '@/screens/LoginScreen';
@@ -29,6 +30,7 @@ import { ShareCardScreen } from '@/screens/ShareCardScreen';
 import { StyleGuideScreen } from '@/screens/StyleGuideScreen';
 import { DrinkingStatsScreen } from '@/screens/DrinkingStatsScreen';
 import { SommelierScreen } from '@/screens/SommelierScreen';
+import { PaywallScreen } from '@/screens/PaywallScreen';
 
 // ============================================
 // QUERY CLIENT
@@ -73,6 +75,7 @@ export type RootStackParamList = {
   StyleGuide: undefined;
   DrinkingStats: undefined;
   Sommelier: undefined;
+  Paywall: undefined;
 };
 
 // ============================================
@@ -259,6 +262,14 @@ function MainNavigator(): JSX.Element {
           animation: 'slide_from_bottom',
         }}
       />
+      <RootStack.Screen
+        name="Paywall"
+        component={PaywallScreen}
+        options={{
+          presentation: 'modal',
+          animation: 'slide_from_bottom',
+        }}
+      />
       {/* EntryDetail screen to be added when implemented */}
     </RootStack.Navigator>
   );
@@ -305,8 +316,10 @@ export default function App(): JSX.Element {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <AuthProvider>
-            <StatusBar style="dark" />
-            <RootNavigator />
+            <SubscriptionProvider>
+              <StatusBar style="dark" />
+              <RootNavigator />
+            </SubscriptionProvider>
           </AuthProvider>
         </QueryClientProvider>
       </SafeAreaProvider>

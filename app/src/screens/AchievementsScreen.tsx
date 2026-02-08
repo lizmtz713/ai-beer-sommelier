@@ -331,7 +331,7 @@ export function AchievementsScreen(): JSX.Element {
     const progress = checkAchievementProgress(achievement, MOCK_USER_STATS);
     
     // Could show a modal with more details
-    console.log('Achievement pressed:', achievement.name, unlocked, progress);
+    // TODO: Implement achievement detail modal
   };
   
   return (
