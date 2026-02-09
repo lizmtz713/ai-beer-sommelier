@@ -23,6 +23,7 @@ import {
   createDefaultProfile,
   calculateStyleMatch,
 } from '@/data/flavorProfile';
+import { BeerAI, hasAPIKey } from '@/services/aiService';
 
 const { width } = Dimensions.get('window');
 
@@ -274,7 +275,7 @@ export function SommelierScreen(): JSX.Element {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   
-  const sendMessage = (text: string) => {
+  const sendMessage = async (text: string) => {
     if (!text.trim()) return;
     
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -290,25 +291,60 @@ export function SommelierScreen(): JSX.Element {
     setInputText('');
     setIsTyping(true);
     
-    // Simulate AI thinking
     setTimeout(() => {
-      const { response, recommendations } = generateSommelierResponse(text, userProfile);
-      
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: response,
-        recommendations,
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, assistantMessage]);
-      setIsTyping(false);
-      
-      setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 100);
-    }, 1000 + Math.random() * 500);
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 100);
+
+    // Build conversation history for context
+    const conversationHistory = messages.slice(-6).map(m => ({
+      role: m.role as 'user' | 'assistant',
+      content: m.content,
+    }));
+
+    // Try AI service first, fallback to local
+    let response: string;
+    let recommendations: BeerRecommendation[] | undefined;
+
+    if (hasAPIKey()) {
+      try {
+        const aiResponse = await BeerAI.chat(text, conversationHistory, {
+          favoriteStyles: ['IPA', 'Pale Ale', 'Hefeweizen'], // From userProfile
+          recentBeers: [], // Would come from diary
+          tasteProfile: {
+            likesBitter: userProfile.preferences.bitterness > 3,
+            likesMalty: userProfile.preferences.sweetness > 3,
+            likesSour: userProfile.preferences.sour > 3,
+            likesStrong: userProfile.preferences.body > 3.5,
+          },
+        });
+        
+        response = aiResponse.message;
+        
+        // If AI mentions specific beers, try to structure as recommendations
+        // For now, use the response as-is (AI responses are conversational)
+      } catch (error) {
+        console.error('AI chat error:', error);
+        const local = generateSommelierResponse(text, userProfile);
+        response = local.response;
+        recommendations = local.recommendations;
+      }
+    } else {
+      // No API key, use local logic
+      const local = generateSommelierResponse(text, userProfile);
+      response = local.response;
+      recommendations = local.recommendations;
+    }
+
+    const assistantMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      role: 'assistant',
+      content: response,
+      recommendations,
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, assistantMessage]);
+    setIsTyping(false);
     
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
