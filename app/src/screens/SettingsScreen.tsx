@@ -23,6 +23,7 @@ import { LoadingSpinner } from '@/components/common/LoadingSpinner';
 import { useAuth } from '@/providers/AuthProvider';
 import { CURRENCIES, VOLUME_UNITS, STORAGE_KEYS } from '@/config/constants';
 import { UserProfile } from '@/types';
+import { BeerAI, setAPIKey, hasAPIKey } from '@/services/aiService';
 
 // ============================================
 // TYPES
@@ -75,6 +76,13 @@ export function SettingsScreen(): JSX.Element {
   const [isSaving, setIsSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   
+  // AI API Keys
+  const [openaiKey, setOpenaiKey] = useState('');
+  const [anthropicKey, setAnthropicKey] = useState('');
+  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [aiConfigured, setAiConfigured] = useState(hasAPIKey());
+  
   // Load preferences
   useEffect(() => {
     loadPreferences();
@@ -100,10 +108,39 @@ export function SettingsScreen(): JSX.Element {
           sharePublicDefault: profile.preferences.sharePublicDefault || false,
         });
       }
+      
+      // Load API keys
+      const storedOpenai = await AsyncStorage.getItem('@beer_openai_key');
+      const storedAnthropic = await AsyncStorage.getItem('@beer_anthropic_key');
+      if (storedOpenai) {
+        setOpenaiKey(storedOpenai);
+        setAPIKey('openai', storedOpenai);
+      }
+      if (storedAnthropic) {
+        setAnthropicKey(storedAnthropic);
+        setAPIKey('anthropic', storedAnthropic);
+      }
+      setAiConfigured(hasAPIKey());
     } catch (error) {
       console.error('Failed to load preferences:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const saveApiKey = async (provider: 'openai' | 'anthropic', key: string) => {
+    try {
+      const storageKey = provider === 'openai' ? '@beer_openai_key' : '@beer_anthropic_key';
+      if (key.trim()) {
+        await AsyncStorage.setItem(storageKey, key.trim());
+        setAPIKey(provider, key.trim());
+      } else {
+        await AsyncStorage.removeItem(storageKey);
+      }
+      setAiConfigured(hasAPIKey());
+      Alert.alert('Success', `${provider === 'openai' ? 'OpenAI' : 'Anthropic'} API key ${key.trim() ? 'saved' : 'removed'}.`);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save API key.');
     }
   };
   
@@ -314,6 +351,77 @@ export function SettingsScreen(): JSX.Element {
           />
         </Card>
         
+        {/* AI Sommelier */}
+        <SectionHeader title="AI Sommelier" />
+        <Card style={styles.card}>
+          <View style={styles.aiStatusRow}>
+            <View style={styles.aiStatusInfo}>
+              <View style={[styles.aiStatusDot, { backgroundColor: aiConfigured ? '#10B981' : '#EF4444' }]} />
+              <Text style={styles.aiStatusText}>
+                {aiConfigured ? 'AI Enabled' : 'No API Key'}
+              </Text>
+            </View>
+            <Text style={styles.aiStatusHint}>
+              {aiConfigured ? 'Real AI recommendations active' : 'Using local recommendations'}
+            </Text>
+          </View>
+          <CardDivider />
+          <View style={styles.apiKeySection}>
+            <View style={styles.apiKeyHeader}>
+              <Text style={styles.apiKeyLabel}>OpenAI API Key</Text>
+              <TouchableOpacity onPress={() => setShowOpenaiKey(!showOpenaiKey)}>
+                <Ionicons name={showOpenaiKey ? 'eye-off-outline' : 'eye-outline'} size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.apiKeyInputRow}>
+              <Input
+                value={openaiKey}
+                onChangeText={setOpenaiKey}
+                placeholder="sk-..."
+                secureTextEntry={!showOpenaiKey}
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.apiKeyInput}
+              />
+              <TouchableOpacity 
+                style={styles.apiKeySaveButton} 
+                onPress={() => saveApiKey('openai', openaiKey)}
+              >
+                <Text style={styles.apiKeySaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <CardDivider />
+          <View style={styles.apiKeySection}>
+            <View style={styles.apiKeyHeader}>
+              <Text style={styles.apiKeyLabel}>Anthropic API Key</Text>
+              <TouchableOpacity onPress={() => setShowAnthropicKey(!showAnthropicKey)}>
+                <Ionicons name={showAnthropicKey ? 'eye-off-outline' : 'eye-outline'} size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.apiKeyInputRow}>
+              <Input
+                value={anthropicKey}
+                onChangeText={setAnthropicKey}
+                placeholder="sk-ant-..."
+                secureTextEntry={!showAnthropicKey}
+                autoCapitalize="none"
+                autoCorrect={false}
+                style={styles.apiKeyInput}
+              />
+              <TouchableOpacity 
+                style={styles.apiKeySaveButton} 
+                onPress={() => saveApiKey('anthropic', anthropicKey)}
+              >
+                <Text style={styles.apiKeySaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <Text style={styles.apiKeyNote}>
+            Get keys from openai.com or anthropic.com. Keys are stored securely on your device only.
+          </Text>
+        </Card>
+        
         {/* Appearance */}
         <SectionHeader title="Appearance" />
         <Card style={styles.card}>
@@ -449,5 +557,70 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     marginLeft: 8,
+  },
+  // AI Section styles
+  aiStatusRow: {
+    paddingVertical: 12,
+  },
+  aiStatusInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  aiStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  aiStatusText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  aiStatusHint: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginLeft: 16,
+  },
+  apiKeySection: {
+    paddingVertical: 12,
+  },
+  apiKeyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  apiKeyLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  apiKeyInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  apiKeyInput: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  apiKeySaveButton: {
+    backgroundColor: '#F59E0B',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  apiKeySaveText: {
+    color: '#FFF',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  apiKeyNote: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 12,
+    lineHeight: 18,
   },
 });
