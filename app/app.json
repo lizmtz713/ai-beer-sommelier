@@ -16,7 +16,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aibeersommelier.app",
+      "bundleIdentifier": "com.lizmtz713.aibeersommelierv2",
       "infoPlist": {
         "NSCameraUsageDescription": "AI Beer Sommelier needs camera access to scan barcodes and take photos of your beers.",
         "NSPhotoLibraryUsageDescription": "AI Beer Sommelier needs photo library access to add beer photos from your gallery.",
