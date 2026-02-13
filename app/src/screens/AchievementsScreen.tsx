@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   Animated,
   Dimensions,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -314,6 +316,8 @@ export function AchievementsScreen(): JSX.Element {
   const insets = useSafeAreaInsets();
   
   const [filter, setFilter] = useState<'all' | 'unlocked' | 'locked'>('all');
+  const [selectedAchievement, setSelectedAchievement] = useState<Achievement | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
   
   // Calculate total points from unlocked achievements
   const totalPoints = ACHIEVEMENTS
@@ -327,11 +331,14 @@ export function AchievementsScreen(): JSX.Element {
   const categories: AchievementCategory[] = ['explorer', 'connoisseur', 'collector', 'adventurer', 'specialist', 'special'];
   
   const handleAchievementPress = (achievement: Achievement) => {
-    const unlocked = MOCK_UNLOCKED.includes(achievement.id);
-    const progress = checkAchievementProgress(achievement, MOCK_USER_STATS);
-    
-    // Could show a modal with more details
-    // TODO: Implement achievement detail modal
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setSelectedAchievement(achievement);
+    setModalVisible(true);
+  };
+  
+  const closeModal = () => {
+    setModalVisible(false);
+    setTimeout(() => setSelectedAchievement(null), 300);
   };
   
   return (
@@ -412,6 +419,92 @@ export function AchievementsScreen(): JSX.Element {
           );
         })}
       </ScrollView>
+      
+      {/* Achievement Detail Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeModal}
+      >
+        <Pressable style={styles.modalOverlay} onPress={closeModal}>
+          <Pressable style={styles.modalContent} onPress={(e) => e.stopPropagation()}>
+            {selectedAchievement && (
+              <>
+                {(() => {
+                  const unlocked = MOCK_UNLOCKED.includes(selectedAchievement.id);
+                  const progress = checkAchievementProgress(selectedAchievement, MOCK_USER_STATS);
+                  const gradient = getTierGradient(selectedAchievement.tier);
+                  
+                  return (
+                    <>
+                      <LinearGradient
+                        colors={unlocked ? gradient : ['#9CA3AF', '#6B7280']}
+                        style={styles.modalIconContainer}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                      >
+                        <Text style={styles.modalIcon}>{selectedAchievement.icon}</Text>
+                        {!unlocked && (
+                          <View style={styles.modalLockOverlay}>
+                            <Ionicons name="lock-closed" size={24} color="#FFF" />
+                          </View>
+                        )}
+                      </LinearGradient>
+                      
+                      <Text style={styles.modalTitle}>{selectedAchievement.name}</Text>
+                      <Text style={styles.modalDescription}>{selectedAchievement.description}</Text>
+                      
+                      {/* Progress */}
+                      {!unlocked && progress.total > 0 && (
+                        <View style={styles.modalProgressSection}>
+                          <View style={styles.modalProgressBar}>
+                            <View
+                              style={[
+                                styles.modalProgressFill,
+                                { width: `${Math.min(progress.percentage, 100)}%` },
+                              ]}
+                            />
+                          </View>
+                          <Text style={styles.modalProgressText}>
+                            {progress.current} / {progress.total}
+                          </Text>
+                        </View>
+                      )}
+                      
+                      {/* Details */}
+                      <View style={styles.modalDetails}>
+                        <View style={styles.modalDetailRow}>
+                          <Text style={styles.modalDetailLabel}>Tier</Text>
+                          <View style={[styles.modalTierBadge, { backgroundColor: getTierColor(selectedAchievement.tier) + '20' }]}>
+                            <Text style={[styles.modalTierText, { color: getTierColor(selectedAchievement.tier) }]}>
+                              {selectedAchievement.tier.charAt(0).toUpperCase() + selectedAchievement.tier.slice(1)}
+                            </Text>
+                          </View>
+                        </View>
+                        <View style={styles.modalDetailRow}>
+                          <Text style={styles.modalDetailLabel}>Points</Text>
+                          <Text style={styles.modalDetailValue}>{selectedAchievement.points} pts</Text>
+                        </View>
+                        <View style={styles.modalDetailRow}>
+                          <Text style={styles.modalDetailLabel}>Status</Text>
+                          <Text style={[styles.modalDetailValue, { color: unlocked ? '#10B981' : '#6B7280' }]}>
+                            {unlocked ? '✅ Unlocked' : '🔒 Locked'}
+                          </Text>
+                        </View>
+                      </View>
+                      
+                      <TouchableOpacity style={styles.modalCloseButton} onPress={closeModal}>
+                        <Text style={styles.modalCloseText}>Close</Text>
+                      </TouchableOpacity>
+                    </>
+                  );
+                })()}
+              </>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -677,5 +770,123 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#F59E0B',
+  },
+  
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 24,
+    padding: 24,
+    width: '100%',
+    maxWidth: 340,
+    alignItems: 'center',
+  },
+  modalIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+    position: 'relative',
+  },
+  modalIcon: {
+    fontSize: 48,
+  },
+  modalLockOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalDescription: {
+    fontSize: 15,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalProgressSection: {
+    width: '100%',
+    marginBottom: 20,
+  },
+  modalProgressBar: {
+    height: 8,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  modalProgressFill: {
+    height: '100%',
+    backgroundColor: '#F59E0B',
+    borderRadius: 4,
+  },
+  modalProgressText: {
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  modalDetails: {
+    width: '100%',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  modalDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  modalDetailLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  modalDetailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  modalTierBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  modalTierText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  modalCloseButton: {
+    backgroundColor: '#F59E0B',
+    paddingVertical: 14,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    width: '100%',
+  },
+  modalCloseText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+    textAlign: 'center',
   },
 });

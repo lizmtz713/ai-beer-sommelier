@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { AuthProvider, useAuth } from '@/providers/AuthProvider';
 import { SubscriptionProvider } from '@/providers/SubscriptionProvider';
@@ -31,6 +32,7 @@ import { StyleGuideScreen } from '@/screens/StyleGuideScreen';
 import { DrinkingStatsScreen } from '@/screens/DrinkingStatsScreen';
 import { SommelierScreen } from '@/screens/SommelierScreen';
 import { PaywallScreen } from '@/screens/PaywallScreen';
+import { EntryDetailScreen } from '@/screens/EntryDetailScreen';
 
 // ============================================
 // QUERY CLIENT
@@ -270,7 +272,13 @@ function MainNavigator(): JSX.Element {
           animation: 'slide_from_bottom',
         }}
       />
-      {/* EntryDetail screen to be added when implemented */}
+      <RootStack.Screen
+        name="EntryDetail"
+        component={EntryDetailScreen}
+        options={{
+          animation: 'slide_from_right',
+        }}
+      />
     </RootStack.Navigator>
   );
 }
@@ -294,9 +302,36 @@ function LoadingScreen(): JSX.Element {
 
 function RootNavigator(): JSX.Element {
   const { user, loading } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
   
-  if (loading) {
+  useEffect(() => {
+    checkOnboardingStatus();
+  }, []);
+  
+  const checkOnboardingStatus = async () => {
+    try {
+      const completed = await AsyncStorage.getItem('onboarding_complete');
+      setShowOnboarding(completed !== 'true');
+    } catch (error) {
+      setShowOnboarding(false);
+    }
+  };
+  
+  const handleOnboardingComplete = useCallback(() => {
+    setShowOnboarding(false);
+  }, []);
+  
+  if (loading || showOnboarding === null) {
     return <LoadingScreen />;
+  }
+  
+  // Show onboarding for new users who aren't logged in
+  if (showOnboarding && !user) {
+    return (
+      <NavigationContainer>
+        <OnboardingScreen onComplete={handleOnboardingComplete} />
+      </NavigationContainer>
+    );
   }
   
   return (
